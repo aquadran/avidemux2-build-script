@@ -1,0 +1,24 @@
+#!/bin/sh -e
+
+ADM2_LIBS=${ADM2_LIBS:=$(PWD)/../target}
+
+PATH=${ADM2_LIBS}/bin:${PATH}
+
+VER=1.3.7
+PKGNAME=libvorbis
+
+if [ ! -f ${PKGNAME}-${VER}.tar.gz ]; then wget --continue http://downloads.xiph.org/releases/vorbis/${PKGNAME}-${VER}.tar.gz; fi
+
+rm -Rf ${PKGNAME}-${VER} && tar xf ${PKGNAME}-${VER}.tar.gz && cd ${PKGNAME}-${VER}
+
+if [ -f ../../patches/${PKGNAME}.patch ]; then cat ../../patches/${PKGNAME}.patch | patch -p0; fi
+
+./configure \
+    --prefix="$ADM2_LIBS" \
+    --disable-oggtest \
+    --disable-docs \
+    --disable-examples \
+    --disable-silent-rules
+
+PROCS="$(sysctl -n hw.ncpu 2>/dev/null)"
+${MAKE:-make} -j $PROCS && ${MAKE:-make} install

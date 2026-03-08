@@ -1,0 +1,52 @@
+--- configure.in.orig	2014-04-08 13:41:05.000000000 -0700
++++ configure.in	2014-06-13 07:49:59.000000000 -0700
+@@ -119,7 +119,7 @@
+ dnl line
+ dnl
+ AC_MSG_CHECKING(whether to use default CFLAGS)
+-if test  x"$CFLAGS" = x"" ; then
++if true; then
+    force_default_cc_options="yes"
+    AC_MSG_RESULT([yes])
+ else
+@@ -694,7 +694,7 @@
+ dnl ==========================================================================
+ 
+ if test "$force_default_cc_options" = "yes" ; then
+-   CFLAGS="$our_cflags_defaults"
++   CFLAGS+=" $our_cflags_defaults"
+ fi
+ 
+ dnl ==========================================================================
+--- configure.in.orig	2019-12-28 08:19:24.000000000 -0600
++++ configure.in	2024-04-29 02:28:42.000000000 -0500
+@@ -329,6 +329,7 @@
+ 	;;
+      darwin*)
+ 	STATIC_LIB="libxvidcore.\$(STATIC_EXTENSION)"
++	SO_LINK="libxvidcore.\$(SHARED_EXTENSION)"
+ 	SPECIFIC_CFLAGS="-fPIC -fno-common -no-cpp-precomp"
+ 	if test x"$macosx_module" = x"no"; then
+ 	   AC_MSG_RESULT([dylib options])
+--- configure.in.orig	2019-12-28 08:19:24.000000000 -0600
++++ configure.in	2024-04-29 02:28:42.000000000 -0500
+@@ -266,7 +266,7 @@
+ 	   AC_MSG_RESULT([.so .a .o])
+ 	   SHARED_EXTENSION="so"
+         else
+-	   AC_MSG_RESULT([.dynlib .a .o])
++	   AC_MSG_RESULT([.dylib .a .o])
+ 	   SHARED_EXTENSION="dylib"
+ 	fi
+ 	STATIC_EXTENSION="a"
+--- configure.in.orig	2019-12-28 08:19:24.000000000 -0600
++++ configure.in	2024-04-29 02:28:42.000000000 -0500
+@@ -333,7 +333,7 @@
+ 	if test x"$macosx_module" = x"no"; then
+ 	   AC_MSG_RESULT([dylib options])
+ 	   SHARED_LIB="libxvidcore.\$(API_MAJOR).\$(SHARED_EXTENSION)"
+-	   SPECIFIC_LDFLAGS="-Wl,-read_only_relocs,suppress -dynamiclib -flat_namespace -compatibility_version \$(API_MAJOR) -current_version \$(API_MAJOR).\$(API_MINOR) -install_name \$(libdir)/\$(SHARED_LIB)"
++	   SPECIFIC_LDFLAGS="-Wl,-read_only_relocs,suppress -dynamiclib -compatibility_version \$(API_MAJOR) -current_version \$(API_MAJOR).\$(API_MINOR) -install_name \$(libdir)/\$(SHARED_LIB)"
+ 	else 
+ 	   AC_MSG_RESULT([module options])
+  	   PRE_SHARED_LIB="libxvidcore.\$(SHARED_EXTENSION)-temp.o"

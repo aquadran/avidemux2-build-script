@@ -1,0 +1,658 @@
+diff --git a/avidemux_core/cmake/admCheckRequiredLibs.cmake b/avidemux_core/cmake/admCheckRequiredLibs.cmake
+index fad2aec17..f85349362 100644
+--- a/avidemux_core/cmake/admCheckRequiredLibs.cmake
++++ b/avidemux_core/cmake/admCheckRequiredLibs.cmake
+@@ -44,7 +44,7 @@ MESSAGE("")
+ MESSAGE(STATUS "Checking for zlib")
+ MESSAGE(STATUS "*****************")
+ 
+-FIND_PACKAGE(ZLIB)
++PKG_CHECK_MODULES(ZLIB zlib)
+ PRINT_LIBRARY_INFO("zlib" ZLIB_FOUND "${ZLIB_INCLUDE_DIR}" "${ZLIB_LIBRARY}" FATAL_ERROR)
+ 
+ MESSAGE("")
+diff --git a/avidemux_core/cmake/admCheckSqlLite.cmake b/avidemux_core/cmake/admCheckSqlLite.cmake
+index 295019754..7fc3201b9 100644
+--- a/avidemux_core/cmake/admCheckSqlLite.cmake
++++ b/avidemux_core/cmake/admCheckSqlLite.cmake
+@@ -12,7 +12,7 @@ MACRO(checkSqlite3)
+       ADD_LIBRARY(adm_sqlite3 INTERFACE)
+       TARGET_LINK_LIBRARIES(adm_sqlite3 INTERFACE unofficial::sqlite3::sqlite3)
+     ELSE()
+-      FIND_PACKAGE(SQLite3)
++      PKG_CHECK_MODULES(SQLite3 sqlite3)
+       IF(SQLite3_FOUND)
+         PRINT_LIBRARY_INFO("Sqlite3" SQLite3_FOUND "${SQLite3_INCLUDE_DIRS}" "${SQLite3_LIBRARIES}")
+ 
+diff --git a/avidemux_core/cmake/admConfigHelper.cmake b/avidemux_core/cmake/admConfigHelper.cmake
+index 8753a84ea..e01a3b7c3 100644
+--- a/avidemux_core/cmake/admConfigHelper.cmake
++++ b/avidemux_core/cmake/admConfigHelper.cmake
+@@ -35,7 +35,7 @@ MACRO(FIND_HEADER_AND_LIB prefix headerFile)
+ 
+     IF(NOT ${headerFile} STREQUAL "")
+       FIND_PATH(${prefix}_INCLUDE_DIR ${headerFile}
+-          PATHS /usr/include/x86_64-linux-gnu) # Needed for 64 bits linux
++          PATHS ${ADM2_LIBS})
+       MARK_AS_ADVANCED(${prefix}_INCLUDE_DIR)
+ 
+       IF(${prefix}_INCLUDE_DIR)
+@@ -49,7 +49,7 @@ MACRO(FIND_HEADER_AND_LIB prefix headerFile)
+     IF(_proceed AND NOT ${ARGV2} STREQUAL "")
+       # On Mac, search firts in port libs, else we might use an older lib coming from the system (e.g. iconv)
+       IF(APPLE)
+-        FIND_LIBRARY(${prefix}_LIBRARY_DIR ${ARGV2} PATHS /opt/local/lib NO_DEFAULT_PATH) # needed for port stuff
++        FIND_LIBRARY(${prefix}_LIBRARY_DIR ${ARGV2} PATHS "" NO_DEFAULT_PATH)
+       ENDIF()
+       FIND_LIBRARY(${prefix}_LIBRARY_DIR ${ARGV2})
+       MARK_AS_ADVANCED(${prefix}_LIBRARY_DIR)
+diff --git a/avidemux_plugins/ADM_audioDecoders/ADM_ad_faad/ADM_ad_faad.cpp b/avidemux_plugins/ADM_audioDecoders/ADM_ad_faad/ADM_ad_faad.cpp
+index 53b471d4e..952322dce 100644
+--- a/avidemux_plugins/ADM_audioDecoders/ADM_ad_faad/ADM_ad_faad.cpp
++++ b/avidemux_plugins/ADM_audioDecoders/ADM_ad_faad/ADM_ad_faad.cpp
+@@ -76,11 +76,7 @@ uint32_t ADM_faad::getOutputFrequency(void)
+ bool ADM_faad::initFaad(WAVHeader *info,uint32_t l,uint8_t *d)
+ {
+ faacDecConfigurationPtr conf;
+-#ifdef FAAD_OLD_PROTOTYPE
+ unsigned long int srate;
+-#else
+-uint32_t srate;
+-#endif
+ unsigned char chan;
+ 
+     _instance = faacDecOpen();
+@@ -225,11 +221,7 @@ long int res;
+ void *outbuf;
+ faacDecFrameInfo info;
+ int max=0;
+-#ifdef FAAD_OLD_PROTOTYPE
+ unsigned long int srate;
+-#else
+-uint32_t srate;
+-#endif
+ unsigned char chan=0;
+ uint8_t first=0;
+ 
+diff --git a/avidemux_plugins/ADM_audioDecoders/ADM_ad_faad/CMakeLists.txt b/avidemux_plugins/ADM_audioDecoders/ADM_ad_faad/CMakeLists.txt
+index 150c06472..aa1434dad 100644
+--- a/avidemux_plugins/ADM_audioDecoders/ADM_ad_faad/CMakeLists.txt
++++ b/avidemux_plugins/ADM_audioDecoders/ADM_ad_faad/CMakeLists.txt
+@@ -7,7 +7,7 @@ IF(USE_FAAD)
+   SET(ADM_ad_faad_SRCS ADM_ad_faad.cpp)
+ 
+   ADD_AUDIO_DECODER(ADM_ad_faad ${ADM_ad_faad_SRCS})
+-  TARGET_LINK_LIBRARIES(ADM_ad_faad PRIVATE ${FAAD_LIBRARY_DIR})
++  TARGET_LINK_LIBRARIES(ADM_ad_faad PRIVATE "${FAAD_LDFLAGS}")
+ 
+   ADD_TARGET_CFLAGS(ADM_ad_faad "-I${FAAD_INCLUDE_DIR}")
+   ADD_TARGET_DEFINITIONS(ADM_ad_faad FAAD_OLD_PROTOTYPE)
+diff --git a/avidemux_plugins/ADM_audioDecoders/ADM_ad_opus/CMakeLists.txt b/avidemux_plugins/ADM_audioDecoders/ADM_ad_opus/CMakeLists.txt
+index 972dcbac3..df3b42e86 100644
+--- a/avidemux_plugins/ADM_audioDecoders/ADM_ad_opus/CMakeLists.txt
++++ b/avidemux_plugins/ADM_audioDecoders/ADM_ad_opus/CMakeLists.txt
+@@ -7,7 +7,7 @@ IF(LIBOPUS_FOUND)
+   SET(ADM_ad_opus_SRCS ADM_opus.cpp)
+ 
+   ADD_AUDIO_DECODER(ADM_ad_opus ${ADM_ad_opus_SRCS})
+-  TARGET_LINK_LIBRARIES(ADM_ad_opus PRIVATE ${LIBOPUS_LIBRARY_DIR})
++  TARGET_LINK_LIBRARIES(ADM_ad_opus PRIVATE ${LIBOPUS_LDFLAGS})
+ 
+   ADD_TARGET_CFLAGS(ADM_ad_opus "-I${LIBOPUS_INCLUDE_DIR}")
+ 
+diff --git a/avidemux_plugins/ADM_audioDecoders/ADM_ad_vorbis/CMakeLists.txt b/avidemux_plugins/ADM_audioDecoders/ADM_ad_vorbis/CMakeLists.txt
+index e6b3f97c1..9c55d09fe 100644
+--- a/avidemux_plugins/ADM_audioDecoders/ADM_ad_vorbis/CMakeLists.txt
++++ b/avidemux_plugins/ADM_audioDecoders/ADM_ad_vorbis/CMakeLists.txt
+@@ -9,7 +9,7 @@ IF(USE_LIBVORBIS)
+ 
+   ADD_AUDIO_DECODER(ADM_ad_vorbis ${ADM_ad_vorbis_SRCS})
+ 
+-  TARGET_LINK_LIBRARIES(ADM_ad_vorbis PRIVATE ${LIBVORBIS_LIBRARY_DIR} ADM_coreUtils6 ADM_coreAudio6)
++  TARGET_LINK_LIBRARIES(ADM_ad_vorbis PRIVATE "${LIBVORBIS_LDFLAGS}" ADM_coreUtils6 ADM_coreAudio6)
+ 
+   include_directories(${LIBVORBIS_INCLUDE_DIR})
+ 
+diff --git a/avidemux_plugins/ADM_audioEncoders/opus/CMakeLists.txt b/avidemux_plugins/ADM_audioEncoders/opus/CMakeLists.txt
+index b0e8d13af..a2ba91583 100644
+--- a/avidemux_plugins/ADM_audioEncoders/opus/CMakeLists.txt
++++ b/avidemux_plugins/ADM_audioEncoders/opus/CMakeLists.txt
+@@ -1,7 +1,7 @@
+ INCLUDE(ae_plugin)
+ SET(ADM_ae_opus_SRCS audioencoder_opus.cpp)
+ ADD_AUDIO_ENCODER(ADM_ae_opus ${ADM_ae_opus_SRCS})
+-TARGET_LINK_LIBRARIES(ADM_ae_opus PRIVATE ${OPUS_ENC_LIBRARY_DIR})
++TARGET_LINK_LIBRARIES(ADM_ae_opus PRIVATE ${LIBOPUS_LDFLAGS})
+ TARGET_INCLUDE_DIRECTORIES(ADM_ae_opus PRIVATE "${OPUS_ENC_INCLUDE_DIR}")
+ INIT_AUDIO_ENCODER(ADM_ae_opus)
+ INSTALL_AUDIOENCODER(ADM_ae_opus)
+diff --git a/avidemux_plugins/ADM_videoEncoder/x265/CMakeLists.txt b/avidemux_plugins/ADM_videoEncoder/x265/CMakeLists.txt
+index addff2148..9a68bec8e 100644
+--- a/avidemux_plugins/ADM_videoEncoder/x265/CMakeLists.txt
++++ b/avidemux_plugins/ADM_videoEncoder/x265/CMakeLists.txt
+@@ -26,7 +26,7 @@ IF(USE_X265)
+     SET(ADM_ve_x265_QT4_Headers qt4/Q_x265.h)
+     SET(ADM_ve_x265_QT4_UI      qt4/x265ConfigDialog)
+     ADD_VIDEO_ENCODER_QT4(ADM_ve_x265_${QT_LIBRARY_EXTENSION}   ${ADM_ve_x265_QT4_SRCS} ${ADM_ve_x265_QT4_Headers} ${ADM_ve_x265_QT4_UI} ${x265_SRCS})
+-    TARGET_LINK_LIBRARIES(ADM_ve_x265_${QT_LIBRARY_EXTENSION} PRIVATE "${X265_LIBRARY_DIR}")
++    TARGET_LINK_LIBRARIES(ADM_ve_x265_${QT_LIBRARY_EXTENSION} PRIVATE "${X265_LDFLAGS}")
+     TARGET_LINK_LIBRARIES(ADM_ve_x265_${QT_LIBRARY_EXTENSION} PRIVATE ADM_core6)
+     INIT_VIDEO_ENCODER(ADM_ve_x265_${QT_LIBRARY_EXTENSION})
+     INSTALL_VIDEO_ENCODER_QT4(ADM_ve_x265_${QT_LIBRARY_EXTENSION})
+@@ -36,7 +36,7 @@ IF(USE_X265)
+   if(DO_COMMON)
+     ADD_VIDEO_ENCODER(ADM_ve_x265_other   ADM_x265_noui.cpp ${x265_SRCS})
+     ADD_TARGET_CFLAGS(ADM_ve_x265_other "-DADM_UI_TYPE_BUILD=1") # CLI!
+-    TARGET_LINK_LIBRARIES(ADM_ve_x265_other PRIVATE "${X265_LIBRARY_DIR}")
++    TARGET_LINK_LIBRARIES(ADM_ve_x265_other PRIVATE "${X265_LDFLAGS}")
+     TARGET_LINK_LIBRARIES(ADM_ve_x265_other PRIVATE ADM_core6)
+     INIT_VIDEO_ENCODER(ADM_ve_x265_other)
+     INSTALL_VIDEO_ENCODER(ADM_ve_x265_other)
+diff --git a/avidemux_plugins/cmake/admCheckAom.cmake b/avidemux_plugins/cmake/admCheckAom.cmake
+index 4311fa066..8f9db6938 100644
+--- a/avidemux_plugins/cmake/admCheckAom.cmake
++++ b/avidemux_plugins/cmake/admCheckAom.cmake
+@@ -10,7 +10,7 @@ IF(NOT AOM_CHECKED)
+         PKG_CHECK_MODULES(AOM aom)
+ 
+         IF(${AOM_FOUND})
+-            PRINT_LIBRARY_INFO("AOM" AOM_FOUND "${AOM_INCLUDEDIR}" "${AOM_LDFLAGS}")
++            PRINT_LIBRARY_INFO("AOM" AOM_FOUND "${AOM_INCLUDEDIRS}" "${AOM_LDFLAGS}")
+         ENDIF()
+     ENDIF()
+     SET(AOM_CHECKED 1)
+diff --git a/avidemux_plugins/cmake/admCheckAudioEncoderLibs.cmake b/avidemux_plugins/cmake/admCheckAudioEncoderLibs.cmake
+index d75052856..c2112e3fd 100644
+--- a/avidemux_plugins/cmake/admCheckAudioEncoderLibs.cmake
++++ b/avidemux_plugins/cmake/admCheckAudioEncoderLibs.cmake
+@@ -1,3 +1,5 @@
++INCLUDE(admConfigHelper)
++
+ ########################################
+ # Aften
+ ########################################
+@@ -140,8 +142,8 @@ MESSAGE(STATUS "Checking for Opus Encoder")
+ MESSAGE(STATUS "*************************")
+ 
+ IF(OPUS_ENCODER)
+-	FIND_HEADER_AND_LIB(OPUS_ENC opus/opus.h opus opus_encoder_create)
+-	PRINT_LIBRARY_INFO("OPUS_ENCODER" OPUS_ENC_FOUND "${OPUS_ENC_INCLUDE_DIR}" "${OPUS_ENC_LIBRARY_DIR}")
++	PKG_CHECK_MODULES(OPUS_ENC opus)
++	PRINT_LIBRARY_INFO("OPUS_ENCODER" OPUS_ENC_FOUND "${OPUS_ENC_INCLUDE_DIRS}" "${OPUS_ENC_LDFLAGS}")
+ 
+ 	IF(OPUS_ENC_FOUND)
+ 		SET(USE_OPUS_ENCODER True CACHE BOOL "")
+@@ -163,8 +165,8 @@ MESSAGE(STATUS "Checking for FAAC")
+ MESSAGE(STATUS "*****************")
+ 
+ IF(FAAC)
+-	FIND_HEADER_AND_LIB(FAAC faac.h faac faacEncClose)
+-	PRINT_LIBRARY_INFO("FAAC" FAAC_FOUND "${FAAC_INCLUDE_DIR}" "${FAAC_LIBRARY_DIR}")
++	PKG_CHECK_MODULES(FAAC faac)
++	PRINT_LIBRARY_INFO("FAAC" FAAC_FOUND "${FAAC_INCLUDE_DIRS}" "${FAAC_LDFLAGS}")
+ 
+ 	IF(FAAC_FOUND)
+ 		SET(USE_FAAC True CACHE BOOL "")
+@@ -191,8 +193,8 @@ MESSAGE(STATUS "Checking for Vorbis")
+ MESSAGE(STATUS "*******************")
+ 
+ IF(VORBIS)
+-	FIND_HEADER_AND_LIB(VORBIS vorbis/vorbisenc.h vorbis vorbis_info_init)
+-	FIND_HEADER_AND_LIB(VORBISENC "" vorbisenc vorbis_encode_init)
++	PKG_CHECK_MODULES(VORBIS vorbis)
++	PKG_CHECK_MODULES(VORBISENC vorbisenc)
+ 
+ 	IF(VORBIS_FOUND AND VORBISENC_FOUND)
+ 		SET(USE_VORBIS True CACHE BOOL "")
+@@ -200,7 +202,7 @@ IF(VORBIS)
+ 		SET(VORBIS_FOUND 0 CACHE INTERNAL "")
+ 	ENDIF()
+ 
+-	PRINT_LIBRARY_INFO("Vorbis" VORBIS_FOUND "${VORBIS_INCLUDE_DIR}" "${VORBIS_LIBRARY_DIR} ${VORBISENC_LIBRARY_DIR}")
++	PRINT_LIBRARY_INFO("Vorbis" VORBIS_FOUND "${VORBIS_INCLUDE_DIRS}" "${VORBIS_LDFLAGS}" "${VORBISENC_LDFLAGS}")
+ ELSE()
+ 	MESSAGE("${MSG_DISABLE_OPTION}")
+ ENDIF()
+diff --git a/avidemux_plugins/cmake/admCheckFaad.cmake b/avidemux_plugins/cmake/admCheckFaad.cmake
+index 6748ac98e..d4de32dc7 100644
+--- a/avidemux_plugins/cmake/admCheckFaad.cmake
++++ b/avidemux_plugins/cmake/admCheckFaad.cmake
+@@ -12,13 +12,15 @@ MACRO(checkFaad)
+ 		MESSAGE(STATUS "*****************")
+ 
+ 		IF(FAAD)
+-			FIND_HEADER_AND_LIB(FAAD faad.h faad)
++			PKG_CHECK_MODULES(FAAD faad2)
+ 
+ 			IF(FAAD_FOUND)
+-				ADM_CHECK_FUNCTION_EXISTS(faacDecInit "${FAAD_LIBRARY_DIR}" FAACDEC_FUNCTION_FOUND "" -I"${FAAD_INCLUDE_DIR}")
++				ADM_CHECK_FUNCTION_EXISTS(faacDecInit "${FAAD_LDFLAGS}" FAACDEC_FUNCTION_FOUND "" -I"${FAAD_INCLUDE_DIRS}")
+ 
+ 				IF(NOT FAACDEC_FUNCTION_FOUND)
+-					ADM_CHECK_FUNCTION_EXISTS(NeAACDecInit "${FAAD_LIBRARY_DIR}" NEAACDEC_FUNCTION_FOUND "" -I"${FAAD_INCLUDE_DIR}")
++					SET(FAAD_INCLUDE_DIR "${FAAD_INCLUDE_DIRS}")
++					SET(FAAD_LIBRARY_DIR "${FAAD_LIBRARY_DIRS}")
++					ADM_CHECK_FUNCTION_EXISTS(NeAACDecInit "${FAAD_LDFLAGS}" NEAACDEC_FUNCTION_FOUND "" -I"${FAAD_INCLUDE_DIRS}")
+ 
+ 					IF(NOT NEAACDEC_FUNCTION_FOUND)
+ 						SET(FAAD_FOUND 0)
+@@ -26,10 +28,10 @@ MACRO(checkFaad)
+ 				ENDIF()
+ 			ENDIF()
+ 
+-			PRINT_LIBRARY_INFO("FAAD" FAAD_FOUND "${FAAD_INCLUDE_DIR}" "${FAAD_LIBRARY_DIR}")
++			PRINT_LIBRARY_INFO("FAAD" FAAD_FOUND "${FAAD_CFLAGS}" "${FAAD_LDFLAGS}")
+ 
+ 			IF(FAAD_FOUND)
+-				CHECK_CFLAGS_REQUIRED(faad_check.cpp "-DOLD_FAAD_PROTO" "${FAAD_INCLUDE_DIR}" "${FAAD_LIBRARY_DIR}" FAAD_CFLAGS_REQUIRED)
++				CHECK_CFLAGS_REQUIRED(faad_check.cpp "-DOLD_FAAD_PROTO" "${FAAD_CFLAGS}" "${FAAD_LDFLAGS}" FAAD_CFLAGS_REQUIRED)
+                                 SET(USE_FAAD True CACHE BOOL "")
+ 				IF(FAAD_CFLAGS_REQUIRED)
+ 					SET(FAAD_OLD_PROTOTYPE 1)
+diff --git a/avidemux_plugins/cmake/admCheckFreeType.cmake b/avidemux_plugins/cmake/admCheckFreeType.cmake
+index e5975d7d7..e150dc3d3 100644
+--- a/avidemux_plugins/cmake/admCheckFreeType.cmake
++++ b/avidemux_plugins/cmake/admCheckFreeType.cmake
+@@ -23,20 +23,4 @@ MACRO(checkFreeType)
+ 
+   MESSAGE("")
+ 
+-  # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # ##
+-  # libiconv
+-  # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # ##
+-  IF(USE_FREETYPE)
+-    MESSAGE(STATUS "Checking for libiconv")
+-    MESSAGE(STATUS "*********************")
+-    FIND_PACKAGE(Iconv)
+-    IF(ICONV_FOUND)
+-      MESSAGE(STATUS "  Iconv found")
+-    ELSE()
+-      MESSAGE(STATUS "iconv not found, disabling FreeType2")
+-      SET(USE_FREETYPE)
+-    ENDIF()
+-
+-    MESSAGE("")
+-  ENDIF()
+ ENDMACRO()
+diff --git a/avidemux_plugins/cmake/admCheckOpus.cmake b/avidemux_plugins/cmake/admCheckOpus.cmake
+index d2092bfa2..b25eddfa6 100644
+--- a/avidemux_plugins/cmake/admCheckOpus.cmake
++++ b/avidemux_plugins/cmake/admCheckOpus.cmake
+@@ -6,15 +6,15 @@ MACRO(checkOpusDec)
+ 		MESSAGE(STATUS "*****************")
+ 
+ 		IF(OPUS)
+-                        FIND_HEADER_AND_LIB(LIBOPUS opus/opus_multistream.h opus opus_multistream_decoder_init ${LIBOPUS_REQUIRED_FLAGS})
++			PKG_CHECK_MODULES(LIBOPUS opus)
+ 	                IF(LIBOPUS_FOUND)
+ 				SET(LIBOPUS_FOUND 1)
+ 				SET(USE_LIBOPUS True CACHE BOOL "")
+-				SET(LIBOPUS_INCLUDE_DIR "${LIBOPUS_INCLUDE_DIR}")
+-				SET(LIBOPUS_LIBRARY_DIR "${LIBOPUS_LIBRARY_DIR}")
++				SET(LIBOPUS_INCLUDE_DIRS "${LIBOPUS_INCLUDE_DIRS}")
++				SET(LIBOPUS_LIBRARY_DIRS "${LIBOPUS_LIBRARY_DIRS}")
+ 			ENDIF()
+ 
+-			PRINT_LIBRARY_INFO("LIBOPUS" LIBOPUS_FOUND "${LIBOPUS_INCLUDE_DIR}" "${LIBOPUS_LIBRARY_DIR}")
++			PRINT_LIBRARY_INFO("LIBOPUS" LIBOPUS_FOUND "${LIBOPUS_INCLUDE_DIRS}" "${LIBOPUS_LDFLAGS}")
+                 ELSE()
+                   MESSAGE("${MSG_DISABLE_OPTION}")
+                 ENDIF()
+diff --git a/avidemux_plugins/cmake/admCheckVorbisDec.cmake b/avidemux_plugins/cmake/admCheckVorbisDec.cmake
+index 70eaa4158..beb6f5896 100644
+--- a/avidemux_plugins/cmake/admCheckVorbisDec.cmake
++++ b/avidemux_plugins/cmake/admCheckVorbisDec.cmake
+@@ -13,17 +13,16 @@ MACRO(checkvorbis)
+ 				SET(LIBVORBIS_REQUIRED_FLAGS "-lm")
+ 			ENDIF()
+ 
+-
+-			FIND_HEADER_AND_LIB(LIBVORBIS vorbis/codec.h vorbis vorbis_synthesis_init ${LIBVORBIS_REQUIRED_FLAGS})
++			PKG_CHECK_MODULES(LIBVORBIS vorbis)
+ 
+ 			IF(LIBVORBIS_FOUND)
+ 				SET(LIBVORBIS_FOUND 1)
+ 				SET(USE_LIBVORBIS True CACHE BOOL "")
+-				SET(LIBVORBIS_INCLUDE_DIR "${LIBVORBIS_INCLUDE_DIR}")
+-				SET(LIBVORBIS_LIBRARY_DIR "${LIBVORBIS_LIBRARY_DIR}")
++				SET(LIBVORBIS_INCLUDE_DIR "${LIBVORBIS_INCLUDE_DIRS}")
++				SET(LIBVORBIS_LIBRARY_DIR "${LIBVORBIS_LIBRARY_DIRS}")
+ 			ENDIF()
+ 
+-			PRINT_LIBRARY_INFO("LIBVORBIS" LIBVORBIS_FOUND "${LIBVORBIS_INCLUDE_DIR}" "${LIBVORBIS_LIBRARY_DIR}")
++			PRINT_LIBRARY_INFO("LIBVORBIS" LIBVORBIS_FOUND "${LIBVORBIS_INCLUDE_DIRS}" "${LIBVORBIS_LDFLAGS}")
+ 		ELSE()
+ 			MESSAGE("${MSG_DISABLE_OPTION}")
+ 		ENDIF()
+diff --git a/avidemux_plugins/cmake/admCheckX264.cmake b/avidemux_plugins/cmake/admCheckX264.cmake
+index d8bbbb21f..4aeef524e 100644
+--- a/avidemux_plugins/cmake/admCheckX264.cmake
++++ b/avidemux_plugins/cmake/admCheckX264.cmake
+@@ -6,27 +6,15 @@ MACRO(checkX264)
+                 MESSAGE(STATUS "*****************")
+ 
+                 IF(X264)
+-                        FIND_HEADER_AND_LIB(_X264 x264.h)
++                        PKG_CHECK_MODULES(X264 x264)
+ 
+-                        IF(_X264_FOUND)
+-                                FILE(READ ${_X264_INCLUDE_DIR}/x264.h X264_H)
+-                                STRING(REGEX MATCH "#define[ ]+X264_BUILD[ ]+([0-9]+)" X264_H "${X264_H}")
+-                                STRING(REGEX REPLACE ".*[ ]([0-9]+).*" "\\1" x264_version "${X264_H}")
+-                                MESSAGE(STATUS "  core version: ${x264_version}")
+-                                IF(x264_version LESS 144)
+-                                        MESSAGE("WARNING: x264 core version is too old.  At least version 144 is required.")
+-                                        SET(X264_FOUND 0)
+-                                ELSE()
+-                                        FIND_HEADER_AND_LIB(X264 x264.h x264 x264_encoder_open_${x264_version})
+-                                ENDIF()
+-                                IF(X264_FOUND)
+-                                        SET(USE_X264 True CACHE BOOL "")
+-                                ENDIF()
++                        IF(X264_FOUND)
++                                SET(USE_X264 True CACHE BOOL "")
+                         ELSE()
+                                 SET(X264_FOUND 0)
+                         ENDIF()
+ 
+-                        PRINT_LIBRARY_INFO("x264" X264_FOUND "${X264_INCLUDE_DIR}" "${X264_LIBRARY_DIR}")
++                        PRINT_LIBRARY_INFO("x264" X264_FOUND "${X264_INCLUDE_DIR}" "${X264_LDFLAGS}")
+                 ELSE()
+                         MESSAGE("${MSG_DISABLE_OPTION}")
+                 ENDIF()
+diff --git a/avidemux_plugins/cmake/admCheckX265.cmake b/avidemux_plugins/cmake/admCheckX265.cmake
+index 9292b484c..d904ee2dc 100644
+--- a/avidemux_plugins/cmake/admCheckX265.cmake
++++ b/avidemux_plugins/cmake/admCheckX265.cmake
+@@ -6,42 +6,13 @@ MACRO(checkX265)
+ 		MESSAGE(STATUS "*****************")
+ 
+ 		IF(X265)
+-			FIND_HEADER_AND_LIB(_X265 x265.h)
+-			FIND_HEADER_AND_LIB(_X265_CONFIG x265_config.h)
+-
+-			IF(_X265_FOUND AND _X265_CONFIG_FOUND)
+-				FILE(READ ${_X265_INCLUDE_DIR}/x265_config.h X265_CONFIG_H)
+-				STRING(REGEX MATCH "#define[ ]+X265_BUILD[ ]+([0-9]+)" X265_CONFIG_H "${X265_CONFIG_H}")
+-				STRING(REGEX REPLACE ".*[ ]([0-9]+).*" "\\1" x265_version "${X265_CONFIG_H}")
+-				MESSAGE(STATUS "  core version: ${x265_version}")
+-				
+-				IF(x265_version LESS 9)
+-					MESSAGE("WARNING: x265 core version is too old.  At least version 9 is required.")
+-					SET(X265_FOUND 0)
+-				ELSE()
+-                                        IF(NOT WIN32)
+-                                                SET(DL dl)
+-                                        ELSE()
+-                                                IF(NOT MSVC)
+-                                                        SET(DL stdc++)
+-                                                ENDIF()
+-                                        ENDIF()
+-                                        IF(MSVC)
+-                                                SET(X265_CFLAGS "-DX265_API_IMPORTS")
+-                                                ADD_DEFINITIONS(${X265_CFLAGS})
+-                                        ENDIF()
+-					FIND_HEADER_AND_LIB(X265 x265.h x265 x265_encoder_open_${x265_version} ${DL})
+-				ENDIF()
+-			ELSE()
+-				MESSAGE(STATUS "  No working version found")
+-				SET(X265_FOUND 0)
+-			ENDIF()
++			PKG_CHECK_MODULES(X265 x265)
+                         IF(X265_FOUND)
+ 				MESSAGE(STATUS "  Workable version found")
+                                 SET(USE_X265 True CACHE BOOL "")
+                         ENDIF()
+ 
+-			PRINT_LIBRARY_INFO("x265" X265_FOUND "${X265_INCLUDE_DIR}" "${X265_LIBRARY_DIR}")
++			PRINT_LIBRARY_INFO("x265" X265_FOUND "${X265_INCLUDE_DIRS}" "${X265_LIBRARY_DIRS}")
+ 		ELSE()
+ 			MESSAGE("${MSG_DISABLE_OPTION}")
+ 		ENDIF()
+diff --git a/avidemux_plugins/cmake/admConfigHelper.cmake b/avidemux_plugins/cmake/admConfigHelper.cmake
+new file mode 100644
+index 000000000..e01a3b7c3
+--- /dev/null
++++ b/avidemux_plugins/cmake/admConfigHelper.cmake
+@@ -0,0 +1,204 @@
++MACRO(PRINT_LIBRARY_INFO libraryName libraryDetected compilerFlags linkerFlags)
++  IF(${libraryDetected})
++    MESSAGE(STATUS "Found ${libraryName}")
++
++    IF(VERBOSE)
++      SET(_compilerFlags "")
++      APPEND_FLAGS(_compilerFlags ${compilerFlags})
++
++      SET(_linkerFlags "")
++      APPEND_FLAGS(_linkerFlags ${linkerFlags})
++
++      MESSAGE(STATUS "Compiler Flags:${_compilerFlags}")
++      MESSAGE(STATUS "Linker Flags  :${_linkerFlags}")
++    ENDIF()
++  ELSE()
++    MESSAGE(STATUS ${ARGV4} "Could not find ${libraryName}")
++  ENDIF()
++ENDMACRO()
++
++
++MACRO(SDLify _source)
++  IF(SDL2_FOUND)
++    SET_SOURCE_FILES_PROPERTIES(${_source} PROPERTIES COMPILE_FLAGS "-I${SDL2_INCLUDE_DIR} ${SDL2_CFLAGS}")
++  ENDIF()
++ENDMACRO()
++
++
++# ARGV2 = library to check
++# ARGV3 = function to check
++# ARVG4 = extra required libs
++MACRO(FIND_HEADER_AND_LIB prefix headerFile)
++  IF(NOT DEFINED ${prefix}_FOUND)
++    SET(${prefix}_FOUND 0 CACHE INTERNAL "")
++    SET(_proceed 1)
++
++    IF(NOT ${headerFile} STREQUAL "")
++      FIND_PATH(${prefix}_INCLUDE_DIR ${headerFile}
++          PATHS ${ADM2_LIBS})
++      MARK_AS_ADVANCED(${prefix}_INCLUDE_DIR)
++
++      IF(${prefix}_INCLUDE_DIR)
++        MESSAGE(STATUS "Found ${headerFile}")
++      ELSE()
++        SET(_proceed 0)
++        MESSAGE(STATUS "Could not find ${headerFile}")
++      ENDIF()
++    ENDIF()
++
++    IF(_proceed AND NOT ${ARGV2} STREQUAL "")
++      # On Mac, search firts in port libs, else we might use an older lib coming from the system (e.g. iconv)
++      IF(APPLE)
++        FIND_LIBRARY(${prefix}_LIBRARY_DIR ${ARGV2} PATHS "" NO_DEFAULT_PATH)
++      ENDIF()
++      FIND_LIBRARY(${prefix}_LIBRARY_DIR ${ARGV2})
++      MARK_AS_ADVANCED(${prefix}_LIBRARY_DIR)
++
++      IF(${prefix}_LIBRARY_DIR)
++        MESSAGE(STATUS "Found ${ARGV2} library")
++
++        IF(NOT ${ARGV3} STREQUAL "")
++          ADM_CHECK_FUNCTION_EXISTS(${ARGV3} "${${prefix}_LIBRARY_DIR}" ${prefix}_FUNCTION_FOUND "${ARGV4}")
++
++          IF(${prefix}_FUNCTION_FOUND)
++            SET(${prefix}_FOUND 1 CACHE INTERNAL "")
++          ENDIF()
++        ELSE()
++          SET(${prefix}_FOUND 1 CACHE INTERNAL "")
++        ENDIF()
++      ELSE()
++        MESSAGE(STATUS "Cound not find ${ARGV2} library")
++      ENDIF()
++    ELSE()
++      SET(${prefix}_FOUND ${_proceed} CACHE INTERNAL "")
++    ENDIF()
++  ENDIF()
++ENDMACRO()
++
++
++MACRO(ADM_COMPILE _file _def _include _lib _varToSet _output)
++  #MESSAGE(STATUS " ADM_compile <${_file}>")
++  IF(AVIDEMUX_THIS_IS_CORE)
++    SET(src ${AVIDEMUX_CORE_SOURCE_DIR}/cmake/cmake_compile_check/${_file})
++  ELSE()
++    SET(src ${ADM_CMAKE_DIR}/cmake_compile_check/${_file})
++  ENDIF()
++  #MESSAGE(STATUS " Compiling <${src}>")
++  IF(NOT DEFINED ${_varToSet}_COMPILED)
++    SET(${_varToSet}_COMPILED 1 CACHE INTERNAL "")
++    TRY_COMPILE(${_varToSet}
++      ${CMAKE_BINARY_DIR}
++      ${src}
++      CMAKE_FLAGS "-DINCLUDE_DIRECTORIES:STRING=${_include}" "-DLINK_LIBRARIES:STRING=${_lib}"
++      COMPILE_DEFINITIONS ${_def}
++      OUTPUT_VARIABLE ${_output})
++    #MESSAGE(STATUS "output=${output}")
++  ENDIF()
++ENDMACRO()
++
++
++#ARGV3 = extra libraries
++#ARGV4 = extra compile flags
++MACRO(ADM_CHECK_FUNCTION_EXISTS _function _lib _varToSet)
++  SET(CHECK_FUNCTION_DEFINE "-DCHECK_FUNCTION_EXISTS=${_function}" ${ARGV4})
++  SET(CHECK_FUNCTION_LIB ${_lib} ${ARGV3})
++
++  ADM_COMPILE(CheckFunctionExists.c "${CHECK_FUNCTION_DEFINE}" "" "${CHECK_FUNCTION_LIB}" ${_varToSet} OUTPUT)
++
++  IF(${_varToSet})
++    MESSAGE(STATUS "Found ${_function} in ${_lib}")
++  ELSE()
++    MESSAGE(STATUS "Could not find ${_function} in ${_lib}")
++
++    IF(VERBOSE)
++      MESSAGE(STATUS ${OUTPUT})
++    ENDIF()
++  ENDIF()
++ENDMACRO()
++
++
++MACRO(CHECK_CFLAGS_REQUIRED _file _cflags _include _lib _varToSet)
++  IF(NOT DEFINED ${_varToSet}_CFLAGS_CHECKED)
++    SET(${_varToSet}_CFLAGS_CHECKED 1 CACHE INTERNAL "")
++
++    ADM_COMPILE(${_file} ${_cflags} ${_include} ${_lib} ${_varToSet}_COMPILE_WITH logwith)
++    ADM_COMPILE(${_file} "" ${_include} ${_lib} ${_varToSet}_COMPILE_WITHOUT logwithout)
++
++    IF(${_varToSet}_COMPILE_WITH AND NOT ${_varToSet}_COMPILE_WITHOUT)
++      SET(${_varToSet} 1 CACHE INTERNAL "")
++
++      IF(VERBOSE)
++        MESSAGE(STATUS "(${_cflags}) required")
++      ENDIF()
++    ELSE()
++      IF(NOT ${_varToSet}_COMPILE_WITH AND ${_varToSet}_COMPILE_WITHOUT)
++        IF(VERBOSE)
++          MESSAGE (STATUS "(${_cflags}) not required")
++        ENDIF()
++      ELSE()
++        MESSAGE(STATUS "Inconsistent compiler output with: ${${_varToSet}_COMPILE_WITH}, without: ${${_varToSet}_COMPILE_WITHOUT}")
++        MESSAGE(STATUS "${logwith}")
++        MESSAGE(STATUS "")
++        MESSAGE(STATUS "${logwithout}")
++      ENDIF()
++    ENDIF()
++  ENDIF()
++ENDMACRO()
++
++
++MACRO(APPEND_FLAGS _flags)
++  IF(NOT ${_flags})
++    SET(${_flags} "")
++  ENDIF()
++
++  FOREACH(_flag ${ARGN})
++    SET(${_flags} "${${_flags}} ${_flag}")
++  ENDFOREACH(_flag ${ARGN})
++
++  IF(${firstChar} AND ${firstChar} STREQUAL " ")
++    STRING(LENGTH "${${_flags}}" stringLength)
++    MATH(EXPR stringLength "${stringLength} - 1")
++    STRING(SUBSTRING "${${_flags}}" 1 ${stringLength} ${_flags})
++  ENDIF()
++ENDMACRO()
++
++
++#ARGV1 = flags
++MACRO(ADD_SOURCE_CFLAGS _target)
++  GET_SOURCE_FILE_PROPERTY(_flags ${_target} COMPILE_FLAGS)
++  APPEND_FLAGS(_flags ${ARGN})
++  SET_SOURCE_FILES_PROPERTIES(${_target} PROPERTIES COMPILE_FLAGS "${_flags}")
++ENDMACRO()
++
++
++MACRO(ADD_TARGET_CFLAGS _target)
++  GET_TARGET_PROPERTY(_flags ${_target} COMPILE_FLAGS)
++  APPEND_FLAGS(_flags ${ARGN})
++  SET_TARGET_PROPERTIES(${_target} PROPERTIES COMPILE_FLAGS "${_flags}")
++ENDMACRO()
++
++
++MACRO(ADD_TARGET_DEFINITIONS _target)
++  SET(newflag)
++  GET_TARGET_PROPERTY(_flags ${_target} COMPILE_FLAGS)
++
++  FOREACH(_def ${ARGN})
++    IF(${_def})
++      APPEND_FLAGS(_flags "-D${_def}")
++      SET(newflag 1)
++    ENDIF()
++  ENDFOREACH(_def ${ARGN})
++
++  IF(newflag)
++    SET_TARGET_PROPERTIES(${_target} PROPERTIES COMPILE_FLAGS "${_flags}")
++  ENDIF()
++ENDMACRO()
++
++MACRO(DUMP_ALL_VARS)
++  get_cmake_property(_variableNames VARIABLES)
++  LIST(SORT _variableNames)
++  FOREACH(_variableName ${_variableNames})
++    MESSAGE(STATUS "${_variableName}=${${_variableName}}")
++  ENDFOREACH()
++ENDMACRO()
++
+diff --git a/avidemux_plugins/cmake/ae_plugin.cmake b/avidemux_plugins/cmake/ae_plugin.cmake
+index 43a5665ea..ae1b754ba 100644
+--- a/avidemux_plugins/cmake/ae_plugin.cmake
++++ b/avidemux_plugins/cmake/ae_plugin.cmake
+@@ -19,5 +19,5 @@ MACRO(INSTALL_AUDIOENCODER _lib)
+   IF(NOT MSVC)
+     SET(EXTRALIB "m")
+   ENDIF()
+-  TARGET_LINK_LIBRARIES(${_lib} PRIVATE ADM_core6 ADM_coreUI6 ADM_coreAudio6 ADM_coreAudioEncoder6 ADM_coreUtils6 ${EXTRALIB})
++  TARGET_LINK_LIBRARIES(${_lib} PRIVATE ADM_core6 ADM_coreUI6 ADM_coreAudio6 ADM_coreAudioEncoder6 ADM_coreUtils6 ${EXTRALIB} "${VORBIS_LDFLAGS}" "${VORBISENC_LDFLAGS}" "${FAAC_LDFLAGS}")
+ ENDMACRO()
+diff --git a/avidemux_plugins/cmake/ve_plugin.cmake b/avidemux_plugins/cmake/ve_plugin.cmake
+index a5b5a9d76..ca3ddaba0 100644
+--- a/avidemux_plugins/cmake/ve_plugin.cmake
++++ b/avidemux_plugins/cmake/ve_plugin.cmake
+@@ -16,7 +16,7 @@ MACRO(INSTALL_VIDEO_ENCODER _lib)
+   IF(NOT MSVC)
+     SET(EXTRALIB "m")
+   ENDIF()
+-  TARGET_LINK_LIBRARIES(${_lib} PRIVATE ADM_core6 ADM_coreUI6 ADM_coreVideoEncoder6 ADM_coreImage6 ADM_coreUtils6 adm_pthread ${EXTRALIB})
++  TARGET_LINK_LIBRARIES(${_lib} PRIVATE ADM_core6 ADM_coreUI6 ADM_coreVideoEncoder6 ADM_coreImage6 ADM_coreUtils6 adm_pthread ${EXTRALIB} ${X264_LDFLAGS} ${X265_LDFLAGS} )
+ ENDMACRO()
+ 
+ MACRO(ADD_VIDEO_ENCODER name)
+diff --git a/avidemux_plugins/cmake/ve_plugin_qt4.cmake b/avidemux_plugins/cmake/ve_plugin_qt4.cmake
+index 4bd1c005f..f1f3f3fcd 100644
+--- a/avidemux_plugins/cmake/ve_plugin_qt4.cmake
++++ b/avidemux_plugins/cmake/ve_plugin_qt4.cmake
+@@ -29,7 +29,7 @@ MACRO(INSTALL_VIDEO_ENCODER_QT4 _lib)
+   IF(NOT MSVC)
+     SET(EXTRALIB "m")
+   ENDIF()
+-  TARGET_LINK_LIBRARIES(${_lib} PRIVATE ADM_core6 ADM_coreUI6 ADM_coreVideoEncoder6 ADM_coreImage6 ADM_coreUtils6 adm_pthread ${EXTRALIB})
++  TARGET_LINK_LIBRARIES(${_lib} PRIVATE ADM_core6 ADM_coreUI6 ADM_coreVideoEncoder6 ADM_coreImage6 ADM_coreUtils6 adm_pthread ${EXTRALIB} ${X264_LDFLAGS} ${X265_LDFLAGS})
+ ENDMACRO()
+ 
+ 

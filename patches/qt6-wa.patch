@@ -1,0 +1,13 @@
+diff --git a/avidemux/qt4/CMakeLists.txt b/avidemux/qt4/CMakeLists.txt
+index acd906aef..95c8e4621 100755
+--- a/avidemux/qt4/CMakeLists.txt
++++ b/avidemux/qt4/CMakeLists.txt
+@@ -265,7 +265,7 @@ TARGET_LINK_LIBRARIES(avidemux3_${QT_EXTENSION} PRIVATE ADM_commonUI6_${QT_EXTEN
+ #
+ # i18n
+ #
+-ADD_SUBDIRECTORY(i18n)
++#ADD_SUBDIRECTORY(i18n)
+ # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+ # Install
+ # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #

@@ -1,0 +1,12 @@
+diff --git a/avidemux_core/cmake/admFFmpegBuild_helpers.cmake b/avidemux_core/cmake/admFFmpegBuild_helpers.cmake
+index 4a187bd60..4d9afb878 100644
+--- a/avidemux_core/cmake/admFFmpegBuild_helpers.cmake
++++ b/avidemux_core/cmake/admFFmpegBuild_helpers.cmake
+@@ -339,6 +339,7 @@ MACRO(ADM_FF_BUILD_UNIX_STYLE)
+   convertPathToUnix(ffmpeg_gnumake_executable ${BASH_EXECUTABLE})
+   CONFIGURE_FILE("${AVIDEMUX_CORE_SOURCE_DIR}/cmake/ffmpeg_make.sh.cmake" "${FFMPEG_BINARY_DIR}/ffmpeg_make.sh")
+   registerFFmpeg("${FFMPEG_SOURCE_DIR}" "${FFMPEG_BINARY_DIR}" 0)
++  FILE(REMOVE "${FFMPEG_SOURCE_DIR}/VERSION")
+ ENDMACRO()
+ #
+ #

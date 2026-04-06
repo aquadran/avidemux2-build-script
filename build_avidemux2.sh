@@ -1,6 +1,6 @@
 #!/bin/bash
 
-REV=8c482973c17c9b007444fc3f67e12b2942506701
+REV=ccc32fe48d6b941cde7848657d380252ff499b12
 
 if [ ! -d avidemux2 ]; then
     git clone --branch master https://github.com/mean00/avidemux2.git avidemux2 && cd avidemux2 && git checkout --force $REV && cd ..

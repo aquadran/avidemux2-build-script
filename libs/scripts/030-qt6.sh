@@ -4,7 +4,7 @@ ADM2_LIBS=${ADM2_LIBS:=$(PWD)/../target}
 
 PATH=${ADM2_LIBS}/bin:${PATH}
 
-QT_VERSION=6.9.3
+QT_VERSION=6.10.3
 QT_VERSION_BASE=`echo $QT_VERSION | cut -d'.' -f 1,2`
 
 if [ ! -f "qt-everywhere-src-$QT_VERSION.tar.xz" ]; then
@@ -24,7 +24,7 @@ if [ ! -d "qt-everywhere-src-$QT_VERSION" ]; then
 	pushd qt-everywhere-src-$QT_VERSION
 	rm qtbase/cmake/FindWrapZSTD.cmake
 	touch qtbase/cmake/FindWrapZSTD.cmake
-	#cat ../patches/patch | patch -p1
+	patch -p1 < ../../patches/qyieldcpu.h.diff
 	popd
 fi
 
